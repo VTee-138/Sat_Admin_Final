@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+  html {
+    font-family: "Manrope" !important;
+  }
+  body {
+    margin: 0;
+    background-color: #f6f7f9;
+  }
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  div,
+  a,
+  th,
+  tr,
+  button,
+  input,
+  label,
+  input,
+  textarea,
+  .manrope-font {
+    font-family: "Manrope" !important;
+    font-optical-sizing: auto;
+    font-style: normal;
+  }
+}
+.manrope-font-size div {
+  font-size: 18px !important;
+}
+.katex {
+  font-size: 19px !important;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 2px dashed black;
+}
+.divider:not(:empty)::before {
+  margin-right: 0.25em;
+}
+.divider:not(:empty)::after {
+  margin-left: 0.25em;
+}
+
+.upload-container {
+  width: 50%;
+  margin: 0 auto;
+  height: 160px;
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  background-color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  transition: border-color 0.3s;
+  margin-bottom: 1.25rem;
+}
+
+.upload-container:hover {
+  border-color: #333;
+}
+
+.upload-container input[type="file"] {
+  display: none;
+}
+
+.upload-container label {
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  padding: 10px 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #fff;
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.upload-container label:hover {
+  background-color: #333;
+  color: #fff;
+  border-color: #333;
+}
+
+.upload-icon {
+  font-size: 50px;
+  color: #ccc;
+  margin-bottom: 10px;
+}
+
+.question-content div {
+  /* font-family: "Palatino Linotype", Arial, sans-serif !important; */
+  /* font-weight: 400 !important;
+  font-weight: 400 !important;
+  font-style: normal;
+  font-size: 1.1rem !important;
+  color: black !important;
+  line-height: 1.5;
+  letter-spacing: 0.00938em; */
+}
+
+table.table-contaiter {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  border: 1px solid #000000;
+}
+.table-contaiter th,
+.table-contaiter td {
+  border: 1px solid #000000;
+  padding: 8px;
+}
+.table-contaiter th {
+  background-color: #009879;
+  color: #ffffff;
+}
+.table-contaiter th.question {
+  text-align: center;
+  width: 50px;
+}
+
+.table-contaiter td.question {
+  text-align: center;
+}
+.table-contaiter th.statement {
+  text-align: left;
+}
+.table-contaiter td.correct,
+.table-contaiter td.wrong {
+  width: 50px;
+  text-align: center;
+}
+
+.MuiTooltip-tooltip {
+  font-size: 15px !important;
+}
