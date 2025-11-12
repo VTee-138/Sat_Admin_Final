@@ -17,6 +17,7 @@ import { Tooltip, Button } from "@mui/material";
 import { Upload, Download } from "@mui/icons-material";
 import { calculateExpireAt } from "../../common/Utils";
 import dayjs from "dayjs";
+import moment from "moment";
 
 const configDate = {
   day: "2-digit",
@@ -27,6 +28,24 @@ const configDate = {
   second: "2-digit",
   hour12: false,
   timeZone: "Asia/Ho_Chi_Minh", // hoặc remove nếu dùng UTC
+};
+
+// Helper function to convert dd/mm/yyyy string to Date object
+const parseDateString = (dateString) => {
+  if (!dateString) return null;
+  // Nếu đã là Date object thì return luôn
+  if (dateString instanceof Date) return dateString;
+  // Nếu là string dd/mm/yyyy thì parse
+  if (
+    typeof dateString === "string" &&
+    /^\d{2}\/\d{2}\/\d{4}$/.test(dateString)
+  ) {
+    const parsed = moment(dateString, "DD/MM/YYYY", true);
+    return parsed.isValid() ? parsed.toDate() : null;
+  }
+  // Nếu là string khác format thì thử parse với moment
+  const parsed = moment(dateString);
+  return parsed.isValid() ? parsed.toDate() : null;
 };
 
 export default function Users() {
@@ -131,8 +150,21 @@ export default function Users() {
   const handleInsertUser = async () => {
     if (validateForm()) {
       try {
+        // DatePicker đã trả về Date object, chỉ cần convert nếu là string
         const dataToSend = {
           ...formData,
+          startDate:
+            formData.startDate instanceof Date
+              ? formData.startDate
+              : parseDateString(formData.startDate),
+          expectedEndDate:
+            formData.expectedEndDate instanceof Date
+              ? formData.expectedEndDate
+              : parseDateString(formData.expectedEndDate),
+          expectedExamDate:
+            formData.expectedExamDate instanceof Date
+              ? formData.expectedExamDate
+              : parseDateString(formData.expectedExamDate),
           childId: selectedParent?._id || "",
         };
         const res = await createUser(dataToSend);
@@ -162,8 +194,21 @@ export default function Users() {
   const handleUpdateUser = async () => {
     if (validateForm()) {
       try {
+        // DatePicker đã trả về Date object, chỉ cần convert nếu là string
         const dataToSend = {
           ...formData,
+          startDate:
+            formData.startDate instanceof Date
+              ? formData.startDate
+              : parseDateString(formData.startDate),
+          expectedEndDate:
+            formData.expectedEndDate instanceof Date
+              ? formData.expectedEndDate
+              : parseDateString(formData.expectedEndDate),
+          expectedExamDate:
+            formData.expectedExamDate instanceof Date
+              ? formData.expectedExamDate
+              : parseDateString(formData.expectedExamDate),
           childId: selectedParent?._id || "",
         };
         const res = await createUser(dataToSend);

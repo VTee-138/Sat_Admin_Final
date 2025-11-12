@@ -1,11 +1,11 @@
 import axios from "axios";
 import { decryptData } from "./decryption";
 
-const REACT_APP_API_BASE_URL = "https://server.10sat.edu.vn/api/v2";
+const REACT_APP_API_BASE_URL = "https://10sat-server.vercel.app/api/v2";
 // const REACT_APP_API_BASE_URL = "http://localhost:4000/api/v2";
 // const REACT_APP_API_BASE_URL = "https://api.10sat.io.vn/api/v2";
 
-export const REACT_APP_API_UPLOAD_URL = "https://server.10sat.edu.vn";
+export const REACT_APP_API_UPLOAD_URL = "https://10sat-server.vercel.app";
 // export const REACT_APP_API_UPLOAD_URL = "http://localhost:4000";
 // Tạo instance Axios
 const apiClient = axios.create({
