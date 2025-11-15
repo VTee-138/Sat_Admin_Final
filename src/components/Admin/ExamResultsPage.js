@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { TablePagination, TableContainer, Paper } from "@mui/material";
 import { getAssessments } from "../../services/AssessmentService";
 import {
   getExamResults,
@@ -11,9 +12,9 @@ export default function ExamResultsPage() {
   const [selectedAssessment, setSelectedAssessment] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const limit = 10;
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     const loadAssessments = async () => {
@@ -40,11 +41,11 @@ export default function ExamResultsPage() {
       try {
         const res = await getExamResults(
           selectedAssessment,
-          currentPage,
-          limit
+          page + 1,
+          rowsPerPage
         );
         setResults(res?.data || []);
-        setTotalPages(res?.totalPages || 1);
+        setTotalItems(res?.totalItems || 0);
       } catch (error) {
         toast.error(
           error?.response?.data?.message || "Lỗi tải kết quả bài thi"
@@ -55,7 +56,7 @@ export default function ExamResultsPage() {
       }
     };
     loadResults();
-  }, [selectedAssessment, currentPage]);
+  }, [selectedAssessment, page, rowsPerPage]);
 
   // Không cần ghép môn nữa, API đã trả sẵn totalScore và cacheTotalScore
 
@@ -97,102 +98,99 @@ export default function ExamResultsPage() {
       </div>
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px]">
-            <thead className="bg-gray-100 border-b">
-              <tr>
-                <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">#</th>
-                <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
-                  Họ tên
-                </th>
-                <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
-                  Tiếng Anh
-                </th>
-                <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
-                  Toán
-                </th>
-                <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
-                  Tổng điểm
-                </th>
-                <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
-                  Thời gian làm (phút)
-                </th>
-                <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
-                  Điểm lần trước
-                </th>
-                <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
-                  Xếp hạng
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+        <TableContainer component={Paper}>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
+              <thead className="bg-gray-100 border-b">
                 <tr>
-                  <td className="p-4 text-center" colSpan={7}>
-                    Đang tải dữ liệu...
-                  </td>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">#</th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Họ tên
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Tiếng Anh
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Toán
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Tổng điểm
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Thời gian làm (phút)
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Điểm lần trước
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Xếp hạng
+                  </th>
                 </tr>
-              ) : results && results.length ? (
-                results.map((r, idx) => (
-                  <tr key={idx} className="border-b hover:bg-gray-50">
-                    <td className="p-2 sm:p-3 text-xs sm:text-sm">{idx + 1}</td>
-                    <td className="p-2 sm:p-3 text-xs sm:text-sm">
-                      {r.fullName}
-                    </td>
-                    <td className="p-2 sm:p-3 text-xs sm:text-sm">
-                      {r.englishScore ?? 0}
-                    </td>
-                    <td className="p-2 sm:p-3 text-xs sm:text-sm">
-                      {r.mathScore ?? 0}
-                    </td>
-                    <td className="p-2 sm:p-3 text-xs sm:text-sm">
-                      {r.totalScore ?? 0}
-                    </td>
-                    <td className="p-2 sm:p-3 text-xs sm:text-sm">
-                      {r.examCompletedTime ?? 0}
-                    </td>
-                    <td className="p-2 sm:p-3 text-xs sm:text-sm">
-                      {r.cacheTotalScore ?? 0}
-                    </td>
-                    <td className="p-2 sm:p-3 text-xs sm:text-sm">
-                      {r.ranking}
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td className="p-4 text-center" colSpan={7}>
+                      Đang tải dữ liệu...
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td className="p-4 text-center" colSpan={7}>
-                    Chưa có dữ liệu
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        {/* Pagination */}
-        <div className="flex flex-col sm:flex-row justify-between p-4 items-center gap-2">
-          <span className="text-sm">
-            Trang {currentPage} / {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 hover:bg-gray-300 transition-colors text-sm"
-            >
-              Trước
-            </button>
-            <button
-              onClick={() =>
-                setCurrentPage((p) => (p < totalPages ? p + 1 : p))
-              }
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 hover:bg-gray-300 transition-colors text-sm"
-            >
-              Sau
-            </button>
+                ) : results && results.length ? (
+                  results.map((r, idx) => (
+                    <tr key={idx} className="border-b hover:bg-gray-50">
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {page * rowsPerPage + idx + 1}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.fullName}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.englishScore ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.mathScore ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.totalScore ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.examCompletedTime ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.cacheTotalScore ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.ranking}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="p-4 text-center" colSpan={7}>
+                      Chưa có dữ liệu
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
+        </TableContainer>
+        {/* Pagination */}
+        <TablePagination
+          component="div"
+          count={totalItems}
+          page={page}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+          labelRowsPerPage="Số dòng mỗi trang:"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} trong ${count}`
+          }
+        />
       </div>
     </div>
   );

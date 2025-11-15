@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import AssessmentForm from "./AssessmentForm";
 import ConfirmationDialog from "./ConfirmationDialog";
 
-import { Tooltip } from "@mui/material";
+import { Tooltip, TablePagination, TableContainer, Paper } from "@mui/material";
 import {
   createAssessment,
   deleteAssessment,
@@ -43,14 +43,12 @@ export default function Assessment() {
   });
   const [childExamIDs, setChildExamIDs] = useState([]);
   const [selectedExams, setSelectedExams] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const limit = 6;
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [isEditing, setIsEditing] = useState(null);
   const [isSearch, setIsSearch] = useState(false);
   const [listAssessments, setListAssessments] = useState([]);
-  // const examsPerPage = 5;
-  // const indexOfLastExam = currentPage * examsPerPage;
   const [searchQuery, setSearchQuery] = useState("");
   const imageRefDoc = useRef(null);
 
@@ -60,10 +58,9 @@ export default function Assessment() {
 
   const handleFetch = async () => {
     try {
-      const response = await getAssessments(currentPage, limit, searchQuery);
-      setListAssessments(response?.data);
-      setTotalPages(response?.totalPages);
-      setCurrentPage(response?.currentPage);
+      const response = await getAssessments(page + 1, rowsPerPage, searchQuery);
+      setListAssessments(response?.data || []);
+      setTotalItems(response?.totalItems || response?.totalAssessments || 0);
     } catch (error) {
       const message = error?.response?.data?.message;
       toast.error(message);
@@ -73,7 +70,7 @@ export default function Assessment() {
   useEffect(() => {
     handleFetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+  }, [page, rowsPerPage]);
 
   const handleEditAssessment = async (assessment) => {
     setIsEditing(true);
@@ -291,7 +288,7 @@ export default function Assessment() {
     } else {
       setIsSearch(false);
     }
-    setCurrentPage(1); // Reset page on search
+    setPage(0); // Reset page on search
     handleFetch(); // Fetch data with query
   };
 
@@ -474,164 +471,151 @@ export default function Assessment() {
 
             {/* Table Content */}
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tên Bài Thi
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Thời gian thi
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Lớp học
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Thao Tác
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {listAssessments.length > 0 ? (
-                    listAssessments.map((assessment) => (
-                      <tr key={assessment?._id} className="hover:bg-gray-50">
-                        <Tooltip title={assessment?._id} placement="top">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                              {assessment?._id?.slice(0, 8)}...
-                            </span>
+              <TableContainer component={Paper}>
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tên Bài Thi
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thời gian thi
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Lớp học
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thao Tác
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {listAssessments.length > 0 ? (
+                      listAssessments.map((assessment) => (
+                        <tr key={assessment?._id} className="hover:bg-gray-50">
+                          <Tooltip title={assessment?._id} placement="top">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
+                                {assessment?._id?.slice(0, 8)}...
+                              </span>
+                            </td>
+                          </Tooltip>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div
+                              className="text-sm font-medium text-gray-900"
+                              title={assessment?.title?.text}
+                            >
+                              {assessment?.title?.text}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {assessment?.childExamIDs?.length || 0} đề thi
+                            </div>
                           </td>
-                        </Tooltip>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div
-                            className="text-sm font-medium text-gray-900"
-                            title={assessment?.title?.text}
-                          >
-                            {assessment?.title?.text}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {assessment?.childExamIDs?.length || 0} đề thi
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="space-y-1">
-                            <div className="text-xs text-blue-600">
-                              <strong>Bắt đầu:</strong>{" "}
-                              {assessment?.startTime
-                                ? dayjs(assessment.startTime).format(
-                                    "DD/MM/YYYY HH:mm"
-                                  )
-                                : "N/A"}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div className="space-y-1">
+                              <div className="text-xs text-blue-600">
+                                <strong>Bắt đầu:</strong>{" "}
+                                {assessment?.startTime
+                                  ? dayjs(assessment.startTime).format(
+                                      "DD/MM/YYYY HH:mm"
+                                    )
+                                  : "N/A"}
+                              </div>
+                              <div className="text-xs text-red-600">
+                                <strong>Kết thúc:</strong>{" "}
+                                {assessment?.deadlineTime === "KTH"
+                                  ? "Không thời hạn"
+                                  : assessment?.deadlineTime
+                                  ? dayjs(assessment.deadlineTime).format(
+                                      "DD/MM/YYYY HH:mm"
+                                    )
+                                  : "N/A"}
+                              </div>
                             </div>
-                            <div className="text-xs text-red-600">
-                              <strong>Kết thúc:</strong>{" "}
-                              {assessment?.deadlineTime === "KTH"
-                                ? "Không thời hạn"
-                                : assessment?.deadlineTime
-                                ? dayjs(assessment.deadlineTime).format(
-                                    "DD/MM/YYYY HH:mm"
-                                  )
-                                : "N/A"}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {assessment?.classes?.join(", ")}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                          <div className="flex items-center justify-center space-x-2">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                const headings =
-                                  document.querySelectorAll("h1");
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {assessment?.classes?.join(", ")}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                            <div className="flex items-center justify-center space-x-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const headings =
+                                    document.querySelectorAll("h1");
 
-                                // Duyệt tìm h2 có nội dung đúng
-                                for (const h2 of headings) {
-                                  if (
-                                    h2.textContent.trim() === "Cập Nhật Bài Thi"
-                                  ) {
-                                    h2.scrollIntoView({
-                                      behavior: "smooth",
-                                      block: "start",
-                                    });
-                                    break;
+                                  // Duyệt tìm h2 có nội dung đúng
+                                  for (const h2 of headings) {
+                                    if (
+                                      h2.textContent.trim() ===
+                                      "Cập Nhật Bài Thi"
+                                    ) {
+                                      h2.scrollIntoView({
+                                        behavior: "smooth",
+                                        block: "start",
+                                      });
+                                      break;
+                                    }
                                   }
-                                }
-                                handleEditAssessment(assessment);
-                              }}
-                              className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors duration-200"
-                              title="Chỉnh sửa bài thi"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleDeleteAssessment(assessment?._id);
-                              }}
-                              className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors duration-200"
-                              title="Xóa bài thi"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                                  handleEditAssessment(assessment);
+                                }}
+                                className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors duration-200"
+                                title="Chỉnh sửa bài thi"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleDeleteAssessment(assessment?._id);
+                                }}
+                                className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors duration-200"
+                                title="Xóa bài thi"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-12 text-center">
+                          <div className="text-gray-500">
+                            Không có bài thi nào
                           </div>
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center">
-                        <div className="text-gray-500">
-                          Không có bài thi nào
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    )}
+                  </tbody>
+                </table>
+              </TableContainer>
 
-            {/* Pagination */}
-            {listAssessments.length > 0 && (
-              <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-700">
-                  Trang{" "}
-                  <span className="font-medium">
-                    {isSearch ? "1" : currentPage}
-                  </span>{" "}
-                  của{" "}
-                  <span className="font-medium">
-                    {isSearch ? "1" : totalPages}
-                  </span>
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                    disabled={currentPage === 1 || isSearch}
-                    className="px-3 py-1 bg-white border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    onClick={() =>
-                      setCurrentPage((p) => (p < totalPages ? p + 1 : p))
-                    }
-                    disabled={currentPage === totalPages || isSearch}
-                    className="px-3 py-1 bg-white border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+              {/* Pagination */}
+              <TablePagination
+                component="div"
+                count={totalItems}
+                page={page}
+                onPageChange={(event, newPage) => setPage(newPage)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(event) => {
+                  setRowsPerPage(parseInt(event.target.value, 10));
+                  setPage(0);
+                }}
+                rowsPerPageOptions={[10, 20, 50, 100]}
+                labelRowsPerPage="Số dòng mỗi trang:"
+                labelDisplayedRows={({ from, to, count }) =>
+                  `${from}-${to} trong ${count}`
+                }
+              />
+            </div>
           </div>
         </div>
       </div>

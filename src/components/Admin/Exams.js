@@ -23,7 +23,7 @@ import {
 import UploadService from "../../services/UploadService";
 import ExamForm from "./ExamForm";
 import ConfirmationDialog from "./ConfirmationDialog";
-import { Tooltip } from "@mui/material";
+import { Tooltip, TablePagination, TableContainer, Paper } from "@mui/material";
 import { REACT_APP_API_UPLOAD_URL } from "../../common/apiClient";
 
 const configDate = {
@@ -78,9 +78,9 @@ export default function Exams() {
     imageRefAnswerQuestion: useRef(null),
     imageRefExam: useRef(null),
   };
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const limit = 6;
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [isEditing, setIsEditing] = useState(null);
   const [isSearch, setIsSearch] = useState(false);
   const [openDialogQuestion, setOpenDialogQuestion] = useState(false);
@@ -106,9 +106,6 @@ export default function Exams() {
     module: false,
     // endTime: false,
   });
-  const examsPerPage = 5;
-  const indexOfLastExam = currentPage * examsPerPage;
-  const indexOfFirstExam = indexOfLastExam - examsPerPage;
   const [searchQuery, setSearchQuery] = useState("");
 
   // State cho confirmation dialog
@@ -249,10 +246,9 @@ export default function Exams() {
 
   const handleFetch = async () => {
     try {
-      const response = await getExams(currentPage, limit, searchQuery);
-      setListExams(response?.data);
-      setTotalPages(response?.totalPages);
-      setCurrentPage(response?.currentPage);
+      const response = await getExams(page + 1, rowsPerPage, searchQuery);
+      setListExams(response?.data || []);
+      setTotalItems(response?.totalItems || response?.totalExams || 0);
     } catch (error) {
       const message = error?.response?.data?.message;
       toast.error(message);
@@ -261,7 +257,7 @@ export default function Exams() {
 
   useEffect(() => {
     handleFetch();
-  }, [currentPage]);
+  }, [page, rowsPerPage]);
 
   // không cần xử lý hàm này nữa vì đã có hàm processQuestionsFromDocx
   // function processQuestionsFromFileAdvanced(data) {
@@ -2578,7 +2574,7 @@ export default function Exams() {
     } else {
       setIsSearch(false);
     }
-    setCurrentPage(1); // Reset page on search
+    setPage(0); // Reset page on search
     handleFetch(); // Fetch data with query
   };
 
@@ -2870,7 +2866,7 @@ export default function Exams() {
             </div>
 
             {/* Table */}
-            <div className="overflow-hidden">
+            <TableContainer component={Paper}>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
@@ -3003,37 +2999,25 @@ export default function Exams() {
                   </p>
                 </div>
               )}
+            </TableContainer>
 
-              {/* Pagination */}
-              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-                <div className="text-sm text-gray-700">
-                  Trang {isSearch ? "1 / 1" : `${currentPage} / ${totalPages}`}
-                  {listExams.length > 0 && (
-                    <span className="ml-2 text-gray-500">
-                      ({listExams.length} đề thi)
-                    </span>
-                  )}
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                    disabled={currentPage === 1 || isSearch}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    ← Trước
-                  </button>
-                  <button
-                    onClick={() =>
-                      setCurrentPage((p) => (p < totalPages ? p + 1 : p))
-                    }
-                    disabled={currentPage === totalPages || isSearch}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Tiếp →
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Pagination */}
+            <TablePagination
+              component="div"
+              count={totalItems}
+              page={page}
+              onPageChange={(event, newPage) => setPage(newPage)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setRowsPerPage(parseInt(event.target.value, 10));
+                setPage(0);
+              }}
+              rowsPerPageOptions={[10, 20, 50, 100]}
+              labelRowsPerPage="Số dòng mỗi trang:"
+              labelDisplayedRows={({ from, to, count }) =>
+                `${from}-${to} trong ${count}`
+              }
+            />
           </div>
         </div>
       </div>

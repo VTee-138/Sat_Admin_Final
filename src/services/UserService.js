@@ -41,6 +41,10 @@ const activePremium = async (id, premium) => {
   return await put(PATH_USER + `/premium/${id}`, { premium });
 };
 
+const unlockTrialAccount = async (id, expireAt) => {
+  return await put(PATH_USER + `/unlock-trial/${id}`, { expireAt });
+};
+
 const searchUsersByEmail = async (email) => {
   return await get(PATH_USER + `/search-by-email?email=${email}`);
 };
@@ -58,6 +62,32 @@ const importUsersFromExcel = async (file) => {
     : "";
   const response = await fetch(
     `${REACT_APP_API_BASE_URL}${PATH_USER}/import-excel`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${jwt?.token}`,
+      },
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Upload failed");
+  }
+
+  return await response.json();
+};
+
+const deleteUsersByExcel = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const jwt = localStorage.getItem("jwt")
+    ? JSON.parse(localStorage.getItem("jwt"))
+    : "";
+  const response = await fetch(
+    `${REACT_APP_API_BASE_URL}${PATH_USER}/bulk-delete-excel`,
     {
       method: "POST",
       headers: {
@@ -129,6 +159,8 @@ export {
   getUserInfoById,
   totalUsers,
   activePremium,
+  unlockTrialAccount,
+  deleteUsersByExcel,
   searchUsersByEmail,
   getUserById,
   importUsersFromExcel,
