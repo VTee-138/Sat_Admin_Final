@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { TablePagination, TableContainer, Paper } from "@mui/material";
+import { TablePagination, TableContainer, Paper } from "@mui/material";
 import { getAssessments } from "../../services/AssessmentService";
 import {
   getExamResults,
@@ -47,6 +48,7 @@ export default function ExamResultsPage() {
           search
         );
         setResults(res?.data || []);
+        setTotalItems(res?.totalItems || 0);
         setTotalItems(res?.totalItems || 0);
       } catch (error) {
         toast.error(
@@ -198,6 +200,22 @@ export default function ExamResultsPage() {
           </div>
         </TableContainer>
         {/* Pagination */}
+        <TablePagination
+          component="div"
+          count={totalItems}
+          page={page}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+          labelRowsPerPage="Số dòng mỗi trang:"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} trong ${count}`
+          }
+        />
         <TablePagination
           component="div"
           count={totalItems}
