@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Edit2, Trash2, Plus, Search } from "lucide-react";
 import { toast } from "react-toastify";
-import { Tooltip } from "@mui/material";
+import { Tooltip, TablePagination, TableContainer, Paper } from "@mui/material";
 import FolderForm from "./FolderForm";
 import ConfirmationDialog from "./ConfirmationDialog";
 import FolderService from "../../services/FolderService";
@@ -24,9 +24,9 @@ export default function Folders() {
     color: "#3954d9",
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const limit = 10;
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [isEditing, setIsEditing] = useState(null);
   const [isSearch, setIsSearch] = useState(false);
   const [listFolders, setListFolders] = useState([]);
@@ -40,13 +40,12 @@ export default function Folders() {
   const handleFetch = async () => {
     try {
       const response = await FolderService.getFolders(
-        currentPage,
-        limit,
+        page + 1,
+        rowsPerPage,
         searchQuery || null
       );
       setListFolders(response?.data || []);
-      setTotalPages(response?.totalPages || 1);
-      setCurrentPage(response?.currentPage || 1);
+      setTotalItems(response?.totalItems || 0);
     } catch (error) {
       const message =
         error?.response?.data?.message || "Lỗi khi tải danh sách thư mục";
@@ -55,8 +54,14 @@ export default function Folders() {
   };
 
   useEffect(() => {
+    if (searchQuery) {
+      handleFetch();
+    }
+  }, [searchQuery]);
+
+  useEffect(() => {
     handleFetch();
-  }, [currentPage, searchQuery]);
+  }, [page, rowsPerPage]);
 
   const handleEditFolder = (folder) => {
     setIsEditing(true);
@@ -161,7 +166,7 @@ export default function Folders() {
 
   const handleSearch = () => {
     setIsSearch(true);
-    setCurrentPage(1); // Reset về trang đầu tiên khi search
+    setPage(0); // Reset về trang đầu tiên khi search
     handleFetch();
   };
 
@@ -184,7 +189,7 @@ export default function Folders() {
   const handleClearSearch = () => {
     setSearchQuery("");
     setIsSearch(false);
-    setCurrentPage(1);
+    setPage(0);
   };
 
   return (
@@ -242,136 +247,126 @@ export default function Folders() {
       {/* Folder Table */}
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
         <div className="max-h-96 overflow-y-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100 border-b">
-              <tr>
-                <th className="p-3 text-left">No</th>
-                <th className="p-3 text-left">Id</th>
-                <th className="p-3 text-left">Tên thư mục</th>
-                <th className="p-3 text-left">Mô tả</th>
-                <th className="p-3 text-left">Màu sắc</th>
-                <th className="p-3 text-left">Tác giả</th>
-                <th className="p-3 text-left">Ngày tạo</th>
-                <th className="p-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listFolders.length > 0 ? (
-                listFolders.map((folder, index) => (
-                  <tr
-                    key={folder?._id}
-                    className="border-b hover:bg-gray-50 transition"
-                  >
-                    <td className="p-3">{index + 1}</td>
-                    <td className="p-3">{folder?._id}</td>
-                    <td className="p-3 font-medium">{folder?.name}</td>
-                    <td className="p-3">
-                      {folder?.description || "Không có mô tả"}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-6 h-6 rounded-full border"
-                          style={{ backgroundColor: folder?.color }}
-                        ></div>
-                        <span className="text-sm">{folder?.color}</span>
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <Tooltip title={folder?.userId?._id} placement="top">
-                        <span>{folder?.author}</span>
-                      </Tooltip>
-                    </td>
-                    <td className="p-3">
-                      {new Date(folder?.createdAt).toLocaleDateString(
-                        "vi-VN",
-                        configDate
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center justify-center space-x-2 h-full min-h-[40px]">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const headings = document.querySelectorAll("h2");
+          <TableContainer component={Paper}>
+            <table className="w-full">
+              <thead className="bg-gray-100 border-b">
+                <tr>
+                  <th className="p-3 text-left">No</th>
+                  <th className="p-3 text-left">Id</th>
+                  <th className="p-3 text-left">Tên thư mục</th>
+                  <th className="p-3 text-left">Mô tả</th>
+                  <th className="p-3 text-left">Màu sắc</th>
+                  <th className="p-3 text-left">Tác giả</th>
+                  <th className="p-3 text-left">Ngày tạo</th>
+                  <th className="p-3 text-center">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listFolders.length > 0 ? (
+                  listFolders.map((folder, index) => (
+                    <tr
+                      key={folder?._id}
+                      className="border-b hover:bg-gray-50 transition"
+                    >
+                      <td className="p-3">{index + 1}</td>
+                      <td className="p-3">{folder?._id}</td>
+                      <td className="p-3 font-medium">{folder?.name}</td>
+                      <td className="p-3">
+                        {folder?.description || "Không có mô tả"}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-6 h-6 rounded-full border"
+                            style={{ backgroundColor: folder?.color }}
+                          ></div>
+                          <span className="text-sm">{folder?.color}</span>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <Tooltip title={folder?.userId?._id} placement="top">
+                          <span>{folder?.author}</span>
+                        </Tooltip>
+                      </td>
+                      <td className="p-3">
+                        {new Date(folder?.createdAt).toLocaleDateString(
+                          "vi-VN",
+                          configDate
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center justify-center space-x-2 h-full min-h-[40px]">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const headings = document.querySelectorAll("h2");
 
-                            // Duyệt tìm h2 có nội dung đúng
-                            for (const h2 of headings) {
-                              if (
-                                h2.textContent.trim() ===
-                                "Cập nhật thông tin thư mục"
-                              ) {
-                                h2.scrollIntoView({
-                                  behavior: "smooth",
-                                  block: "start",
-                                });
-                                break;
+                              // Duyệt tìm h2 có nội dung đúng
+                              for (const h2 of headings) {
+                                if (
+                                  h2.textContent.trim() ===
+                                  "Cập nhật thông tin thư mục"
+                                ) {
+                                  h2.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "start",
+                                  });
+                                  break;
+                                }
                               }
-                            }
-                            handleEditFolder(folder);
-                          }}
-                          className="text-blue-500 hover:text-blue-700 transition"
-                          title="Sửa thư mục"
-                        >
-                          <Edit2 className="w-5 h-5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleDeleteFolder(folder?._id);
-                          }}
-                          className="text-red-500 hover:text-red-700 transition"
-                          title="Xóa thư mục"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
+                              handleEditFolder(folder);
+                            }}
+                            className="text-blue-500 hover:text-blue-700 transition"
+                            title="Sửa thư mục"
+                          >
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteFolder(folder?._id);
+                            }}
+                            className="text-red-500 hover:text-red-700 transition"
+                            title="Xóa thư mục"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="p-8 text-center text-gray-500">
+                      Không có thư mục nào
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7" className="p-8 text-center text-gray-500">
-                    Không có thư mục nào
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </TableContainer>
 
-        {/* Pagination */}
-        <div className="flex justify-between p-4 items-center">
-          <div className="flex items-center gap-4">
-            <span>Trang {`${currentPage} / ${totalPages}`}</span>
-            {searchQuery && (
-              <span className="text-sm text-gray-600">
-                Kết quả tìm kiếm cho: "{searchQuery}"
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 hover:bg-gray-300 transition"
-            >
-              Trước
-            </button>
-            <button
-              onClick={() =>
-                setCurrentPage((p) => (p < totalPages ? p + 1 : p))
-              }
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 hover:bg-gray-300 transition"
-            >
-              Sau
-            </button>
-          </div>
+          {/* Pagination */}
+          <TablePagination
+            component="div"
+            count={totalItems}
+            page={page}
+            onPageChange={(event, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[10, 20, 50, 100]}
+            labelRowsPerPage="Số dòng mỗi trang:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} trong ${count}`
+            }
+          />
         </div>
       </div>
 

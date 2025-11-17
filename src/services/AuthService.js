@@ -1,5 +1,5 @@
 import jwtDecode from "jwt-decode";
-import { get, post } from "../common/apiClient";
+import { del, get, post } from "../common/apiClient";
 
 const PATH_AUTH = "/auth";
 const login = async (body) => {
@@ -39,4 +39,8 @@ const checkJwtExistsAndExpired = () => {
     return false; // Nếu có lỗi khi giải mã token, coi như không hợp lệ
   }
 };
-export { login, checkJwtExistsAndExpired };
+
+const logoutSession = async () => {
+  return await del(PATH_AUTH + `/sessions`);
+};
+export { login, checkJwtExistsAndExpired, logoutSession };
