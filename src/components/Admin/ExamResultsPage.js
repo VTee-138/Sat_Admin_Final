@@ -16,6 +16,10 @@ export default function ExamResultsPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const loadAssessments = async () => {
@@ -45,6 +49,9 @@ export default function ExamResultsPage() {
           page + 1,
           rowsPerPage,
           search
+          page + 1,
+          rowsPerPage,
+          search
         );
         setResults(res?.data || []);
         setTotalItems(res?.totalItems || 0);
@@ -58,6 +65,7 @@ export default function ExamResultsPage() {
       }
     };
     loadResults();
+  }, [selectedAssessment, page, rowsPerPage, search]);
   }, [selectedAssessment, page, rowsPerPage, search]);
 
   // Không cần ghép môn nữa, API đã trả sẵn totalScore và cacheTotalScore
@@ -101,6 +109,21 @@ export default function ExamResultsPage() {
             }}
           />
         </div>
+        <div className="w-full">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Tìm kiếm (theo tên, email, tên lớp)
+          </label>
+          <input
+            type="text"
+            className="w-1/3 px-3 py-2 border rounded-md"
+            placeholder="Nhập tên, email hoặc tên lớp để tìm kiếm..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0); // Reset về trang đầu khi search
+            }}
+          />
+        </div>
         <div>
           <button
             onClick={() =>
@@ -115,6 +138,88 @@ export default function ExamResultsPage() {
       </div>
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <TableContainer component={Paper}>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
+              <thead className="bg-gray-100 border-b">
+                <tr>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">#</th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Họ tên
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Tên lớp
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Tiếng Anh
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Toán
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Tổng điểm
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Thời gian làm (phút)
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Điểm lần trước
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Xếp hạng
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td className="p-4 text-center" colSpan={9}>
+                      Đang tải dữ liệu...
+                    </td>
+                  </tr>
+                ) : results && results.length ? (
+                  results.map((r, idx) => (
+                    <tr key={idx} className="border-b hover:bg-gray-50">
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {page * rowsPerPage + idx + 1}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.fullName}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.className || "-"}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.englishScore ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.mathScore ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.totalScore ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.examCompletedTime ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.cacheTotalScore ?? 0}
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        {r.ranking}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="p-4 text-center" colSpan={9}>
+                      Chưa có dữ liệu
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </TableContainer>
         <TableContainer component={Paper}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px]">
