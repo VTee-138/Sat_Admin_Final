@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Edit2, Trash2, Plus, Search, BookOpen } from "lucide-react";
 import { toast } from "react-toastify";
-import { Tooltip } from "@mui/material";
+import { Tooltip, TablePagination, TableContainer, Paper } from "@mui/material";
 import VocabularyForm from "./VocabularyForm";
 import ConfirmationDialog from "./ConfirmationDialog";
 import VocabularyService from "../../services/VocabularyService";
@@ -29,9 +29,9 @@ export default function Vocabularies() {
     tags: [],
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const limit = 10;
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [isEditing, setIsEditing] = useState(null);
   const [isSearch, setIsSearch] = useState(false);
   const [listVocabularies, setListVocabularies] = useState([]);
@@ -46,19 +46,14 @@ export default function Vocabularies() {
 
   const handleFetch = async () => {
     try {
-      let url = `/vocabulary?page=${currentPage}&limit=${limit}`;
-      if (selectedFolderId) url += `&folderId=${selectedFolderId}`;
-      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
-
       const response = await VocabularyService.getVocabularies(
-        currentPage,
-        limit,
+        page + 1,
+        rowsPerPage,
         selectedFolderId || null,
         searchQuery || null
       );
       setListVocabularies(response?.data || []);
-      setTotalPages(response?.totalPages || 1);
-      setCurrentPage(response?.currentPage || 1);
+      setTotalItems(response?.totalItems || 0);
     } catch (error) {
       const message =
         error?.response?.data?.message || "Lỗi khi tải danh sách từ vựng";
@@ -77,7 +72,7 @@ export default function Vocabularies() {
 
   useEffect(() => {
     handleFetch();
-  }, [currentPage, selectedFolderId]);
+  }, [page, rowsPerPage, selectedFolderId]);
 
   useEffect(() => {
     handleFetchFolders();
@@ -208,6 +203,7 @@ export default function Vocabularies() {
 
   const handleSearch = () => {
     setIsSearch(true);
+    setPage(0);
     handleFetch();
   };
 
@@ -379,141 +375,138 @@ export default function Vocabularies() {
       {/* Vocabulary Table */}
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
         <div className="max-h-96 overflow-y-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100 border-b">
-              <tr>
-                <th className="p-3 text-left">No</th>
-                <th className="p-3 text-left">Từ vựng</th>
-                <th className="p-3 text-left">Nghĩa</th>
-                <th className="p-3 text-left">Phát âm</th>
-                <th className="p-3 text-left">Ví dụ</th>
-                <th className="p-3 text-left">Thư mục</th>
-                <th className="p-3 text-left">Trạng thái</th>
-                <th className="p-3 text-left">Ngày tạo</th>
-                <th className="p-3 text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listVocabularies.length > 0 ? (
-                listVocabularies.map((vocabulary, index) => (
-                  <tr
-                    key={vocabulary?._id}
-                    className="border-b hover:bg-gray-50 transition"
-                  >
-                    <td className="p-3">{index + 1}</td>
-                    <td className="p-3 font-medium">{vocabulary?.word}</td>
-                    <td className="p-3">{vocabulary?.meaning}</td>
-                    <td className="p-3">{vocabulary?.pronunciation || "—"}</td>
-                    <td className="p-3 max-w-xs truncate">
-                      {vocabulary?.example || "—"}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{
-                            backgroundColor: vocabulary?.folderId?.color,
-                          }}
-                        ></div>
-                        <span className="text-sm">
-                          {vocabulary?.folderId?.name}
+          <TableContainer component={Paper}>
+            <table className="w-full">
+              <thead className="bg-gray-100 border-b">
+                <tr>
+                  <th className="p-3 text-left">No</th>
+                  <th className="p-3 text-left">Từ vựng</th>
+                  <th className="p-3 text-left">Nghĩa</th>
+                  <th className="p-3 text-left">Phát âm</th>
+                  <th className="p-3 text-left">Ví dụ</th>
+                  <th className="p-3 text-left">Thư mục</th>
+                  <th className="p-3 text-left">Trạng thái</th>
+                  <th className="p-3 text-left">Ngày tạo</th>
+                  <th className="p-3 text-center">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listVocabularies.length > 0 ? (
+                  listVocabularies.map((vocabulary, index) => (
+                    <tr
+                      key={vocabulary?._id}
+                      className="border-b hover:bg-gray-50 transition"
+                    >
+                      <td className="p-3">{index + 1}</td>
+                      <td className="p-3 font-medium">{vocabulary?.word}</td>
+                      <td className="p-3">{vocabulary?.meaning}</td>
+                      <td className="p-3">
+                        {vocabulary?.pronunciation || "—"}
+                      </td>
+                      <td className="p-3 max-w-xs truncate">
+                        {vocabulary?.example || "—"}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{
+                              backgroundColor: vocabulary?.folderId?.color,
+                            }}
+                          ></div>
+                          <span className="text-sm">
+                            {vocabulary?.folderId?.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                            vocabulary?.status
+                          )}`}
+                        >
+                          {getStatusText(vocabulary?.status)}
                         </span>
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                          vocabulary?.status
-                        )}`}
-                      >
-                        {getStatusText(vocabulary?.status)}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {new Date(vocabulary?.createdAt).toLocaleDateString(
-                        "vi-VN",
-                        configDate
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center justify-center space-x-2 h-full min-h-[40px]">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const headings = document.querySelectorAll("h2");
+                      </td>
+                      <td className="p-3">
+                        {new Date(vocabulary?.createdAt).toLocaleDateString(
+                          "vi-VN",
+                          configDate
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center justify-center space-x-2 h-full min-h-[40px]">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const headings = document.querySelectorAll("h2");
 
-                            // Duyệt tìm h2 có nội dung đúng
-                            for (const h2 of headings) {
-                              if (
-                                h2.textContent.trim() ===
-                                "Cập nhật thông tin từ vựng"
-                              ) {
-                                h2.scrollIntoView({
-                                  behavior: "smooth",
-                                  block: "start",
-                                });
-                                break;
+                              // Duyệt tìm h2 có nội dung đúng
+                              for (const h2 of headings) {
+                                if (
+                                  h2.textContent.trim() ===
+                                  "Cập nhật thông tin từ vựng"
+                                ) {
+                                  h2.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "start",
+                                  });
+                                  break;
+                                }
                               }
-                            }
-                            handleEditVocabulary(vocabulary);
-                          }}
-                          className="text-blue-500 hover:text-blue-700 transition"
-                          title="Sửa từ vựng"
-                        >
-                          <Edit2 className="w-5 h-5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleDeleteVocabulary(vocabulary?._id);
-                          }}
-                          className="text-red-500 hover:text-red-700 transition"
-                          title="Xóa từ vựng"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
+                              handleEditVocabulary(vocabulary);
+                            }}
+                            className="text-blue-500 hover:text-blue-700 transition"
+                            title="Sửa từ vựng"
+                          >
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteVocabulary(vocabulary?._id);
+                            }}
+                            className="text-red-500 hover:text-red-700 transition"
+                            title="Xóa từ vựng"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="9" className="p-8 text-center text-gray-500">
+                      Không có từ vựng nào
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="9" className="p-8 text-center text-gray-500">
-                    Không có từ vựng nào
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </TableContainer>
 
-        {/* Pagination */}
-        <div className="flex justify-between p-4 items-center">
-          <span>
-            Trang {isSearch ? "1 / 1" : `${currentPage} / ${totalPages}`}
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1 || isSearch}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 hover:bg-gray-300 transition"
-            >
-              Trước
-            </button>
-            <button
-              onClick={() =>
-                setCurrentPage((p) => (p < totalPages ? p + 1 : p))
-              }
-              disabled={currentPage === totalPages || isSearch}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 hover:bg-gray-300 transition"
-            >
-              Sau
-            </button>
-          </div>
+          {/* Pagination */}
+          <TablePagination
+            component="div"
+            count={totalItems}
+            page={page}
+            onPageChange={(event, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[10, 20, 50, 100]}
+            labelRowsPerPage="Số dòng mỗi trang:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} trong ${count}`
+            }
+          />
         </div>
       </div>
 

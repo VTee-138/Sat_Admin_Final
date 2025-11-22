@@ -2,11 +2,17 @@ import { get, REACT_APP_API_BASE_URL } from "../common/apiClient";
 
 const PATH_EXAM_RESULT = "/exam-result";
 
-const getExamResults = async (assessmentId, page = 1, limit = 10) => {
+const getExamResults = async (
+  assessmentId,
+  page = 1,
+  limit = 10,
+  search = ""
+) => {
   const params = new URLSearchParams();
   if (assessmentId) params.append("assessmentId", assessmentId);
   params.append("page", String(page));
   params.append("limit", String(limit));
+  if (search) params.append("search", search);
   return await get(`${PATH_EXAM_RESULT}?${params.toString()}`);
 };
 

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Edit2, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { Edit2, Trash2, CheckCircle2, XCircle, LockOpen } from "lucide-react";
 import { toast } from "react-toastify";
 import UserForm from "./UserForm";
 import ImportUsersModal from "./ImportUsersModal";
 import ConfirmationDialog from "./ConfirmationDialog";
+import BulkDeleteUsersModal from "./BulkDeleteUsersModal";
 import {
   activePremium,
   createUser,
@@ -12,11 +13,19 @@ import {
   searchUsersByEmail,
   getUserById,
   exportTrialUsers,
+  unlockTrialAccount,
 } from "../../services/UserService";
-import { Tooltip, Button } from "@mui/material";
-import { Upload, Download } from "@mui/icons-material";
+import {
+  Tooltip,
+  Button,
+  TablePagination,
+  TableContainer,
+  Paper,
+} from "@mui/material";
+import { Upload, Download, DeleteSweep } from "@mui/icons-material";
 import { calculateExpireAt } from "../../common/Utils";
 import dayjs from "dayjs";
+import moment from "moment";
 
 const configDate = {
   day: "2-digit",
@@ -27,6 +36,24 @@ const configDate = {
   second: "2-digit",
   hour12: false,
   timeZone: "Asia/Ho_Chi_Minh", // hoặc remove nếu dùng UTC
+};
+
+// Helper function to convert dd/mm/yyyy string to Date object
+const parseDateString = (dateString) => {
+  if (!dateString) return null;
+  // Nếu đã là Date object thì return luôn
+  if (dateString instanceof Date) return dateString;
+  // Nếu là string dd/mm/yyyy thì parse
+  if (
+    typeof dateString === "string" &&
+    /^\d{2}\/\d{2}\/\d{4}$/.test(dateString)
+  ) {
+    const parsed = moment(dateString, "DD/MM/YYYY", true);
+    return parsed.isValid() ? parsed.toDate() : null;
+  }
+  // Nếu là string khác format thì thử parse với moment
+  const parsed = moment(dateString);
+  return parsed.isValid() ? parsed.toDate() : null;
 };
 
 export default function Users() {
@@ -41,14 +68,12 @@ export default function Users() {
     childId: "",
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const limit = 6;
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [isEditing, setIsEditing] = useState(null);
   const [isSearch, setIsSearch] = useState(false);
   const [listUsers, setListUsers] = useState([]);
-  const examsPerPage = 5;
-  const indexOfLastExam = currentPage * examsPerPage;
   const [searchQuery, setSearchQuery] = useState("");
 
   // States cho search phụ huynh
@@ -58,6 +83,7 @@ export default function Users() {
 
   // State cho import modal
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
 
   // State cho export loading
   const [exporting, setExporting] = useState(false);
@@ -68,10 +94,9 @@ export default function Users() {
 
   const handleFetch = async () => {
     try {
-      const response = await getUsers(currentPage, limit, searchQuery);
-      setListUsers(response?.data);
-      setTotalPages(response?.totalPages);
-      setCurrentPage(response?.currentPage);
+      const response = await getUsers(page + 1, rowsPerPage, searchQuery);
+      setListUsers(response?.data || []);
+      setTotalItems(response?.totalItems || response?.countTotalUsers || 0);
     } catch (error) {
       const message = error?.response?.data?.message;
       toast.error(message);
@@ -80,7 +105,7 @@ export default function Users() {
 
   useEffect(() => {
     handleFetch();
-  }, [currentPage]);
+  }, [page, rowsPerPage]);
 
   const handleEditUser = async (user) => {
     console.log("🚀 ~ handleEditUser ~ user:", user);
@@ -131,8 +156,21 @@ export default function Users() {
   const handleInsertUser = async () => {
     if (validateForm()) {
       try {
+        // DatePicker đã trả về Date object, chỉ cần convert nếu là string
         const dataToSend = {
           ...formData,
+          startDate:
+            formData.startDate instanceof Date
+              ? formData.startDate
+              : parseDateString(formData.startDate),
+          expectedEndDate:
+            formData.expectedEndDate instanceof Date
+              ? formData.expectedEndDate
+              : parseDateString(formData.expectedEndDate),
+          expectedExamDate:
+            formData.expectedExamDate instanceof Date
+              ? formData.expectedExamDate
+              : parseDateString(formData.expectedExamDate),
           childId: selectedParent?._id || "",
         };
         const res = await createUser(dataToSend);
@@ -162,8 +200,21 @@ export default function Users() {
   const handleUpdateUser = async () => {
     if (validateForm()) {
       try {
+        // DatePicker đã trả về Date object, chỉ cần convert nếu là string
         const dataToSend = {
           ...formData,
+          startDate:
+            formData.startDate instanceof Date
+              ? formData.startDate
+              : parseDateString(formData.startDate),
+          expectedEndDate:
+            formData.expectedEndDate instanceof Date
+              ? formData.expectedEndDate
+              : parseDateString(formData.expectedEndDate),
+          expectedExamDate:
+            formData.expectedExamDate instanceof Date
+              ? formData.expectedExamDate
+              : parseDateString(formData.expectedExamDate),
           childId: selectedParent?._id || "",
         };
         const res = await createUser(dataToSend);
@@ -257,7 +308,7 @@ export default function Users() {
     } else {
       setIsSearch(false);
     }
-    setCurrentPage(1); // Reset page on search
+    setPage(0); // Reset page on search
     handleFetch(); // Fetch data with query
   };
 
@@ -337,6 +388,34 @@ export default function Users() {
     }
   };
 
+  // Handle unlock trial account
+  const handleUnlockTrialAccount = async (userId, fullName) => {
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn mở khóa và chuyển tài khoản "${fullName}" từ Trial sang Normal?\n\nTài khoản sẽ được:\n- Mở khóa\n- Chuyển từ Trial sang Normal\n- Hết hạn sau 1 năm\n- Có thể đăng nhập bình thường`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      // Set expireAt to 1 year from now
+      const expireAt = dayjs().add(1, "year").toDate();
+      const response = await unlockTrialAccount(userId, expireAt);
+
+      if (response) {
+        toast.success("Mở khóa và chuyển đổi tài khoản thành công!");
+        // Refresh data
+        handleFetch();
+      }
+    } catch (error) {
+      console.error("Error unlocking account:", error);
+      const message =
+        error?.response?.data?.message || "Lỗi khi mở khóa tài khoản";
+      toast.error(message);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 overflow-auto">
       <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-800">
@@ -388,6 +467,19 @@ export default function Users() {
         </Button>
         <Button
           variant="contained"
+          startIcon={<DeleteSweep />}
+          onClick={() => setBulkDeleteModalOpen(true)}
+          sx={{
+            backgroundColor: "#ef4444",
+            "&:hover": {
+              backgroundColor: "#dc2626",
+            },
+          }}
+        >
+          Xóa theo Excel
+        </Button>
+        <Button
+          variant="contained"
           startIcon={<Download />}
           onClick={handleExportTrialUsers}
           disabled={exporting}
@@ -414,17 +506,22 @@ export default function Users() {
           // setImportModalOpen(false);
         }}
       />
+      <BulkDeleteUsersModal
+        open={bulkDeleteModalOpen}
+        onClose={() => setBulkDeleteModalOpen(false)}
+        onSuccess={handleFetch}
+      />
 
       {/* user Table */}
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="max-h-96 overflow-y-auto">
+        <TableContainer component={Paper}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px]">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                  {/* <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
                     ID
-                  </th>
+                  </th> */}
                   <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
                     Email
                   </th>
@@ -439,6 +536,12 @@ export default function Users() {
                   </th>
                   <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
                     Lớp
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Loại TK
+                  </th>
+                  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                    Trạng thái
                   </th>
                   <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
                     Ngày hết hạn
@@ -458,11 +561,11 @@ export default function Users() {
                       key={user?._id}
                       className="border-b hover:bg-gray-50 transition-colors"
                     >
-                      <Tooltip title={user?._id} placement="top">
+                      {/* <Tooltip title={user?._id} placement="top">
                         <td className="p-2 sm:p-3 text-xs sm:text-sm">
                           {user?._id?.slice(0, 5)}...{user?._id?.slice(-5)}
                         </td>
-                      </Tooltip>
+                      </Tooltip> */}
                       <td className="p-2 sm:p-3 text-xs sm:text-sm break-all">
                         {user?.email}
                       </td>
@@ -495,6 +598,28 @@ export default function Users() {
                         {user?.class || "-"}
                       </td>
                       <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            user?.accountType === "trial"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}
+                        >
+                          {user?.accountType === "trial" ? "Trial" : "Normal"}
+                        </span>
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            user?.isLocked
+                              ? "bg-red-100 text-red-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {user?.isLocked ? "Đã khóa" : "Hoạt động"}
+                        </span>
+                      </td>
+                      <td className="p-2 sm:p-3 text-xs sm:text-sm">
                         {new Date(user?.expireAt).toLocaleDateString(
                           "vi-VN",
                           configDate
@@ -508,6 +633,26 @@ export default function Users() {
                       </td> */}
                       <td className="p-2 sm:p-3">
                         <div className="flex items-center justify-center space-x-1 sm:space-x-2 h-full min-h-[40px]">
+                          {/* Nút mở khóa - chỉ hiện khi tài khoản trial bị khóa */}
+                          {user?.accountType === "trial" && user?.isLocked && (
+                            <Tooltip title="Mở khóa và chuyển sang Normal">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleUnlockTrialAccount(
+                                    user?._id,
+                                    user?.fullName
+                                  );
+                                }}
+                                className="text-green-500 hover:text-green-700 transition-colors p-1"
+                                title="Mở khóa"
+                              >
+                                <LockOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+                              </button>
+                            </Tooltip>
+                          )}
                           <button
                             type="button"
                             onClick={(e) => {
@@ -562,32 +707,25 @@ export default function Users() {
               </tbody>
             </table>
           </div>
-        </div>
+        </TableContainer>
 
         {/* Pagination */}
-        <div className="flex flex-col sm:flex-row justify-between p-4 items-center gap-2">
-          <span className="text-sm">
-            Trang {isSearch ? "1 / 1" : `${currentPage} / ${totalPages}`}
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1 || isSearch}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 hover:bg-gray-300 transition-colors text-sm"
-            >
-              Trước
-            </button>
-            <button
-              onClick={() =>
-                setCurrentPage((p) => (p < totalPages ? p + 1 : p))
-              }
-              disabled={currentPage === totalPages || isSearch}
-              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 hover:bg-gray-300 transition-colors text-sm"
-            >
-              Sau
-            </button>
-          </div>
-        </div>
+        <TablePagination
+          component="div"
+          count={totalItems}
+          page={page}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+          labelRowsPerPage="Số dòng mỗi trang:"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} trong ${count}`
+          }
+        />
       </div>
 
       {/* Confirmation Dialog */}

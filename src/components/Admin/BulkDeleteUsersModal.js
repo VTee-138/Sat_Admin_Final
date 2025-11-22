@@ -6,6 +6,8 @@ import {
   Button,
   IconButton,
   Alert,
+  CircularProgress,
+  Chip,
   Table,
   TableBody,
   TableCell,
@@ -13,20 +15,19 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
-  CircularProgress,
 } from "@mui/material";
 import {
   Close,
   CloudUpload,
   Download,
+  DeleteSweep,
   CheckCircle,
-  Error,
+  Error as ErrorIcon,
 } from "@mui/icons-material";
-import { importUsersFromExcel } from "../../services/UserService";
 import { toast } from "react-toastify";
+import { deleteUsersByExcel } from "../../services/UserService";
 
-export default function ImportUsersModal({ open, onClose, onSuccess }) {
+export default function BulkDeleteUsersModal({ open, onClose, onSuccess }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
@@ -47,17 +48,15 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
 
     try {
       setUploading(true);
-      const response = await importUsersFromExcel(file);
-
+      const response = await deleteUsersByExcel(file);
       setResult(response.data);
       toast.success(response.message);
-
-      if (response.data.success.length > 0) {
+      if (response.data.deletedCount > 0 && onSuccess) {
         onSuccess();
       }
     } catch (error) {
-      console.error("Error importing users:", error);
-      toast.error(error.message || "Lỗi khi import users");
+      console.error("Error deleting users by Excel:", error);
+      toast.error(error.message || "Lỗi khi xóa tài khoản");
     } finally {
       setUploading(false);
     }
@@ -71,73 +70,18 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
 
   const downloadTemplate = () => {
     const XLSX = require("xlsx");
-
-    // Create sample data
     const sampleData = [
-      {
-        email: "student1@example.com",
-        password: "password123",
-        fullName: "Nguyen Van A",
-        role: 0,
-        person: "HS",
-        class: "10A1",
-        expireAt: 365,
-        startDate: "2025-01-01",
-        expectedEndDate: "2025-12-31",
-        expectedExamDate: "2025-12-15",
-        childEmail: "",
-      },
-      {
-        email: "student2@example.com",
-        password: "password123",
-        fullName: "Tran Thi B",
-        role: 0,
-        person: "HS",
-        class: "10A2",
-        expireAt: 365,
-        startDate: "2025-01-01",
-        expectedEndDate: "2025-12-31",
-        expectedExamDate: "2025-12-15",
-        childEmail: "",
-      },
-      {
-        email: "parent1@example.com",
-        password: "password123",
-        fullName: "Nguyen Van C",
-        role: 0,
-        person: "PH",
-        class: "",
-        expireAt: 365,
-        startDate: "2025-01-01",
-        expectedEndDate: "2025-12-31",
-        expectedExamDate: "2025-12-15",
-        childEmail: "student1@example.com",
-      },
+      { email: "student1@example.com" },
+      { email: "student2@example.com" },
+      { email: "parent1@example.com" },
     ];
 
-    // Create workbook and worksheet
     const worksheet = XLSX.utils.json_to_sheet(sampleData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "DeleteUsers");
+    worksheet["!cols"] = [{ wch: 30 }];
 
-    // Set column widths
-    const wscols = [
-      { wch: 25 }, // email
-      { wch: 15 }, // password
-      { wch: 20 }, // fullName
-      { wch: 8 }, // role
-      { wch: 10 }, // person
-      { wch: 10 }, // class
-      { wch: 12 }, // expireAt
-      { wch: 15 }, // startDate
-      { wch: 15 }, // expectedEndDate
-      { wch: 15 }, // expectedExamDate
-      { wch: 25 }, // childEmail
-    ];
-    worksheet["!cols"] = wscols;
-
-    // Download
-    XLSX.writeFile(workbook, "template_import_users.xlsx");
+    XLSX.writeFile(workbook, "template_delete_users.xlsx");
   };
 
   return (
@@ -148,7 +92,7 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: { xs: "90%", md: "80%", lg: "70%" },
+          width: { xs: "90%", md: "70%", lg: "60%" },
           maxHeight: "90vh",
           overflow: "auto",
           bgcolor: "background.paper",
@@ -157,7 +101,6 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
           p: 4,
         }}
       >
-        {/* Header */}
         <Box
           sx={{
             display: "flex",
@@ -167,51 +110,33 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
           }}
         >
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            Import Users từ Excel
+            Xóa tài khoản bằng Excel
           </Typography>
           <IconButton onClick={handleClose}>
             <Close />
           </IconButton>
         </Box>
 
-        {/* Instructions */}
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            <strong>Hướng dẫn:</strong>
-          </Typography>
+        <Alert severity="warning" sx={{ mb: 3 }}>
           <Typography variant="body2" component="div">
-            • File Excel phải có các cột: email, password, fullName, role,
-            person, class, expireAt, startDate, expectedEndDate,
-            expectedExamDate
-            <br />
-            • role: 0 = User, 1 = Admin
-            <br />
-            • person: HS = Học sinh, PH = Phụ huynh
-            <br />
-            • expireAt: Số ngày hết hạn (số)
-            <br />
-            • Nếu person = PH, cần có cột childEmail (email của học sinh)
-            <br />• Ngày tháng định dạng: YYYY-MM-DD hoặc DD/MM/YYYY
-            <br />
-            <strong>
-              • Nếu email đã tồn tại: Hệ thống sẽ cập nhật thông tin từ Excel
-            </strong>
-            <br />• Password: Chỉ cập nhật nếu có trong Excel (có thể để trống)
+            • File Excel chỉ cần có <strong>1 cột email</strong> (header phải là
+            <strong> email</strong>)<br />
+            • Hệ thống sẽ xóa các tài khoản tương ứng nếu tìm thấy và không phải
+            Admin
+            <br />• Không thể hoàn tác, hãy kiểm tra kỹ trước khi thực hiện
           </Typography>
         </Alert>
 
-        {/* Download Template Button */}
         <Box sx={{ mb: 3 }}>
           <Button
             variant="outlined"
             startIcon={<Download />}
             onClick={downloadTemplate}
           >
-            Tải file mẫu (Template)
+            Tải file mẫu (email)
           </Button>
         </Box>
 
-        {/* File Upload */}
         <Box
           sx={{
             mb: 3,
@@ -224,16 +149,17 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
           <input
             accept=".xlsx,.xls"
             style={{ display: "none" }}
-            id="upload-excel-file"
+            id="delete-users-excel"
             type="file"
             onChange={handleFileChange}
           />
-          <label htmlFor="upload-excel-file">
+          <label htmlFor="delete-users-excel">
             <Button
               variant="contained"
               component="span"
               startIcon={<CloudUpload />}
               disabled={uploading}
+              color="error"
             >
               Chọn File Excel
             </Button>
@@ -245,53 +171,51 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
           )}
         </Box>
 
-        {/* Upload Button */}
         <Box sx={{ mb: 3, textAlign: "center" }}>
           <Button
             variant="contained"
-            color="primary"
+            color="error"
             onClick={handleUpload}
             disabled={!file || uploading}
             startIcon={
-              uploading ? <CircularProgress size={20} /> : <CloudUpload />
+              uploading ? <CircularProgress size={20} /> : <DeleteSweep />
             }
           >
-            {uploading ? "Đang import..." : "Import Users"}
+            {uploading ? "Đang xóa..." : "Xóa tài khoản"}
           </Button>
         </Box>
 
-        {/* Results */}
         {result && (
           <Box>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              Kết quả Import
+              Kết quả xử lý
             </Typography>
-
-            <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 3 }}>
               <Chip
                 icon={<CheckCircle />}
-                label={`Thành công: ${result.success.length}`}
+                label={`Đã xóa: ${
+                  result.deletedCount || result.success.length
+                }`}
                 color="success"
                 variant="outlined"
               />
               <Chip
-                icon={<Error />}
+                icon={<ErrorIcon />}
                 label={`Lỗi: ${result.errors.length}`}
                 color="error"
                 variant="outlined"
               />
               <Chip
-                label={`Tổng: ${result.total}`}
+                label={`Tổng dòng: ${result.totalRows}`}
                 color="default"
                 variant="outlined"
               />
             </Box>
 
-            {/* Success Table */}
             {result.success.length > 0 && (
               <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-                  Users đã xử lý thành công:
+                  Đã xóa:
                 </Typography>
                 <TableContainer component={Paper}>
                   <Table size="small">
@@ -299,30 +223,13 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
                       <TableRow>
                         <TableCell>Dòng</TableCell>
                         <TableCell>Email</TableCell>
-                        <TableCell>Tên</TableCell>
-                        <TableCell>Trạng thái</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {result.success.map((item, idx) => (
-                        <TableRow key={idx}>
+                        <TableRow key={`${item.email}-${idx}`}>
                           <TableCell>{item.row}</TableCell>
                           <TableCell>{item.email}</TableCell>
-                          <TableCell>{item.fullName}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={
-                                item.action === "created"
-                                  ? "Tạo mới"
-                                  : "Cập nhật"
-                              }
-                              color={
-                                item.action === "created" ? "success" : "info"
-                              }
-                              size="small"
-                              variant="outlined"
-                            />
-                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -331,11 +238,10 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
               </Box>
             )}
 
-            {/* Error Table */}
             {result.errors.length > 0 && (
               <Box>
                 <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-                  Lỗi:
+                  Không thể xóa:
                 </Typography>
                 <TableContainer component={Paper}>
                   <Table size="small">
@@ -343,14 +249,14 @@ export default function ImportUsersModal({ open, onClose, onSuccess }) {
                       <TableRow>
                         <TableCell>Dòng</TableCell>
                         <TableCell>Email</TableCell>
-                        <TableCell>Lỗi</TableCell>
+                        <TableCell>Lý do</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {result.errors.map((item, idx) => (
-                        <TableRow key={idx}>
+                        <TableRow key={`${item.email || "invalid"}-${idx}`}>
                           <TableCell>{item.row}</TableCell>
-                          <TableCell>{item.email}</TableCell>
+                          <TableCell>{item.email || "N/A"}</TableCell>
                           <TableCell>
                             <Typography variant="body2" color="error">
                               {item.error}

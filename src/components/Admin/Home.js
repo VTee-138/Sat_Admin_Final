@@ -28,6 +28,7 @@ import QuestionBank from "./QuestionBank";
 import ExamResultsPage from "./ExamResultsPage";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
 import StreakManagement from "./StreakManagement";
+import { logoutSession } from "../../services/AuthService";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -45,6 +46,13 @@ const Home = () => {
       const message = error?.response?.data?.message;
       toast.error(message);
     }
+  };
+
+  const handleLogout = async () => {
+    await logoutSession();
+    localStorage.removeItem("jwt");
+    localStorage.removeItem("user");
+    navigate("/login");
   };
 
   useEffect(() => {
@@ -199,13 +207,7 @@ const Home = () => {
               {user?.name}
             </div>
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <LogoutIcon
-                className="cursor-pointer"
-                onClick={() => {
-                  localStorage.clear();
-                  navigate("/login");
-                }}
-              />
+              <LogoutIcon className="cursor-pointer" onClick={handleLogout} />
             </div>
           </div>
         </header>
